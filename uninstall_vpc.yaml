@@ -1,0 +1,12 @@
+- hosts: all
+  connection: local
+  tasks:
+
+    - name: Deleting resource group
+      azure_rm_resourcegroup:
+        name: "{{ resource_group_name }}"
+        state: absent
+        force_delete_nonempty: true  # Use the force_delete_nonempty option
+      register: rg
+    - debug:
+        var: rg

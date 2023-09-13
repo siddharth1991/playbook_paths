@@ -1,0 +1,93 @@
+- hosts: all
+  connection: local
+
+  vars:
+    resource_group: "{{ resource_group_name }}"
+    vpc_name: "{{ vpc_name }}"
+    subnet_name: "{{ subnet_name }}"
+
+    vpcCidrBlock: '10.0.0.0/16'
+    subNetCidrBlock: '10.0.1.0/24'
+
+    state: 'present'
+    location: "{{ azure_region }}"
+
+    nsg_name: "{{nsg_name}}"
+
+    vm_name: "{{vm_name}}"
+
+    network_interface_name: "{{network_interface_name}}"
+    admin_ssh_key: "{{admin_key_public}}"
+
+  tasks:
+
+    - name: Create a resource group
+      azure_rm_resourcegroup:
+        name: "{{ resource_group }}"
+        location: "{{ location }}"
+        state: "{{ state }}"
+
+
+    - name: Create first virtual network
+      azure_rm_virtualnetwork:
+        resource_group: "{{ resource_group }}"
+        name: "{{ vpc_name }}"
+        address_prefixes: "{{ vpcCidrBlock }}"
+        state: "{{ state }}"
+
+    - name: Add subnet
+      azure_rm_subnet:
+        resource_group: "{{ resource_group }}"
+        name: "{{ subnet_name }}"
+        address_prefix: "{{ subNetCidrBlock }}"
+        virtual_network: "{{ vpc_name }}"
+        state: "{{ state }}"
+
+    - name: Create security rules in NSG
+      azure_rm_securitygroup:
+        resource_group: "{{ resource_group }}"
+        name: "{{ nsg_name }}"
+        rules:
+          - name: "HTTP"
+            protocol: "Tcp"
+            source_address_prefix: "*"
+            destination_address_prefix: "*"
+            destination_port_range: "80"
+            access: "Allow"
+            priority: 101
+            direction: "Inbound"
+            source_port_range: "*"
+        state: "{{ state }}"
+
+    - name: Create network interface
+      azure_rm_networkinterface:
+        resource_group: "{{ resource_group }}"
+        name: "{{ network_interface_name }}"
+        virtual_network: "{{ vpc_name }}"
+        subnet: "{{ subnet_name }}"
+        state: "{{ state }}"
+        location: "{{location}}"
+        private_ip_allocation_method: "Dynamic"
+        security_group: "{{nsg_name}}"
+
+    - name: Create virtual machine
+      azure_rm_virtualmachine:
+        resource_group: "{{ resource_group }}"
+        name: "{{ vm_name }}"
+        vm_size: "Standard_F2"
+        admin_username: "azureuser"
+        ssh_password_enabled: false
+        location: "{{location}}"
+        ssh_public_keys:
+          - path: "/home/azureuser/.ssh/authorized_keys"
+            key_data: "{{ admin_ssh_key }}"
+        os_disk_name: "{{ vm_name }}-osdisk"
+        os_disk_caching: "ReadWrite"
+        managed_disk_type: "Standard_LRS"
+        image:
+          publisher: "Canonical"
+          offer: "UbuntuServer"
+          sku: "18.04-LTS"
+          version: "latest"
+        network_interface_names: "{{network_interface_name}}"
+        state: "{{ state }}"

@@ -1,0 +1,9 @@
+all:
+  hosts:
+    localhost:
+      ansible_connection: local
+      ansible_python_interpreter: "{{ansible_playbook_python}}"
+
+      #The line ansible_python_interpreter: "{{ansible_playbook_python}}" is used to ensure that
+      #the same Python interpreter is used to run Ansible tasks on the target hosts as the one used
+    #to run the Ansible playbook. This is important because it ensures that the Ansible tasks will have access to the same Python libraries and modules as the Ansible playbook.
